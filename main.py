@@ -54,20 +54,22 @@ def get_status() -> dict:
 
             for i in range(count):
                 handle = nvmlDeviceGetHandleByIndex(i)
-                print(nvmlDeviceGetName(handle))
                 util = nvmlDeviceGetUtilizationRates(handle)
 
-                #print(util.gpu)      # %
-                #print(util.memory)   # %
-                key = nvmlDeviceGetName(handle).decode()
-                results[key]["Utilisation,%"] = util
-                
-                mem = nvmlDeviceGetMemoryInfo(handle)
-                results[key]["Memory"] = mem
+                print(util.gpu)      # %
+                print(util.memory)   # %
+
+                name = nvmlDeviceGetName(handle).decode()
+                results["GPU"][i]["name"] = name
+                results["GPU"][i]["Utilisation,%"] = util.gpu
+                results["GPU"][i]["Memory,%"] = util.memory
+                print(results["GPU"])
+                #mem = nvmlDeviceGetMemoryInfo(handle)
+                #results["GPU"][i]["Memory"] = mem
 
                 #Temperature
                 temp = nvmlDeviceGetTemperature(handle,NVML_TEMPERATURE_GPU)
-                results[key]["Temperature,°C"] = temp
+                results["GPU"][i]["Temperature,°C"] = temp
             nvmlShutdown()
         
         except Exception:
