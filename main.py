@@ -5,6 +5,7 @@ import os
 import psutil
 from time import sleep
 import asyncio
+from pynvml import *
 
 load_dotenv() 
 API_KEY=os.getenv("API_KEY")
@@ -23,7 +24,8 @@ def get_status() -> dict:
             "Available": None,
             "Used" : None,
             "Percent": None
-        }
+        },
+        "GPU" : None
     }
     while True:
         cpu_percent = psutil.cpu_percent(interval=None,percpu=True)
@@ -45,7 +47,34 @@ def get_status() -> dict:
         except Exception:
             pass
         
+        #GPU
+        try:
+            nvmlInit()
+            count = nvmlDeviceGetCount()
+
+            for i in range(count):
+                handle = nvmlDeviceGetHandleByIndex(i)
+                print(nvmlDeviceGetName(handle))
+                util = nvmlDeviceGetUtilizationRates(handle)
+
+                #print(util.gpu)      # %
+                #print(util.memory)   # %
+                key = nvmlDeviceGetName(handle).decode()
+                results[key]["Utilisation,%"] = util
+                
+                mem = nvmlDeviceGetMemoryInfo(handle)
+                results[key]["Memory"] = mem
+
+                #Temperature
+                temp = nvmlDeviceGetTemperature(handle,NVML_TEMPERATURE_GPU)
+                results[key]["Temperature,°C"] = temp
+            nvmlShutdown()
+        
+        except Exception:
+            pass
+        
         return results
+        
 
 async def send_status(chat_id, bot):
     while True:
@@ -58,7 +87,7 @@ async def send_status(chat_id, bot):
             parse_mode="MarkdownV2",
         )
 
-        await asyncio.sleep(3600)  
+        await asyncio.sleep(3)  
 
 async def start(update: Update,context: ContextTypes.DEFAULT_TYPE)->None:
     
