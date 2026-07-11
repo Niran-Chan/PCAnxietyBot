@@ -75,7 +75,7 @@ async def start(update: Update,context: ContextTypes.DEFAULT_TYPE)->None:
 
 async def stop(update: Update,context: ContextTypes.DEFAULT_TYPE):
     global status_task
-    print("Attempting to stop")
+    #print("Attempting to stop")
     if status_task:
         status_task.cancel()
         status_task = None
