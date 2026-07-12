@@ -14,7 +14,15 @@ whitelist = os.getenv("WHITELIST_TELEID")
 if(whitelist):
     whitelist = whitelist.strip().split(",")
 
-def get_status() -> dict:
+def check_id(user_id):
+        if user_id not in whitelist:
+            return False
+        return True
+
+
+def get_status(user_id = None) -> dict:
+    if(check_id(user_id) == False):
+        return 
     results = {
         "CPU,%" : None,
         "Temperature,°C" : None,
@@ -25,27 +33,27 @@ def get_status() -> dict:
             "Percent": None
         }
     }
-    while True:
-        cpu_percent = psutil.cpu_percent(interval=None,percpu=True)
-        results["CPU,%"] = cpu_percent
 
-        #Memory
-        mem = psutil.virtual_memory()
-        results["Memory"]["Total"] = mem.total
-        results["Memory"]["Available"] =  mem.available
-        results["Memory"]["Used"] =  mem.used
-        results["Memory"]["Percent"] = mem.percent
-        
-        #Temperature
+    cpu_percent = psutil.cpu_percent(interval=None,percpu=True)
+    results["CPU,%"] = cpu_percent
 
-        try:
-            temps = psutil.sensors_temperatures()
-            results["Temperature,°C"] = temps
+    #Memory
+    mem = psutil.virtual_memory()
+    results["Memory"]["Total"] = mem.total
+    results["Memory"]["Available"] =  mem.available
+    results["Memory"]["Used"] =  mem.used
+    results["Memory"]["Percent"] = mem.percent
+    
+    #Temperature
+
+    try:
+        temps = psutil.sensors_temperatures()
+        results["Temperature,°C"] = temps
+    
+    except Exception:
+        pass
         
-        except Exception:
-            pass
-        
-        return results
+    return results
 
 async def send_status(chat_id, bot):
     while True:
@@ -61,11 +69,10 @@ async def send_status(chat_id, bot):
         await asyncio.sleep(3600)  
 
 async def start(update: Update,context: ContextTypes.DEFAULT_TYPE)->None:
-    
     user_id = str(update.effective_user.id)
-    if user_id not in whitelist:
+    if(check_id(user_id) == False):
         return 
-    
+
     global status_task
     if status_task is None or status_task.done():
         await update.message.reply_text(f"Hi! I am PCAnxietyBot. I am here to help you with your anxious needs by reassuring you about the status of your pc every hour right here. Lets get started!")
@@ -82,10 +89,25 @@ async def stop(update: Update,context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text("Monitoring stopped. Please /start again to start your hourly update")
 
+async def get_status_handler(update: Update,context: ContextTypes.DEFAULT_TYPE):
+    user_id = str(update.effective_user.id)
+    if(check_id(user_id) == False):
+        return
+    
+    status = get_status(user_id=user_id)
+
+    formatted = "\n".join(f"{k:<20} {v}"for k, v in status.items())
+
+    await context.bot.send_message(
+        user_id,
+        f"```\n{formatted}\n```",
+        parse_mode="MarkdownV2",
+    )
 def run():
     app = ApplicationBuilder().token(API_KEY).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("stop", stop))
+    app.add_handler(CommandHandler("gcs"),get_status_handler)
     app.run_polling()
 
 if __name__ == '__main__':
