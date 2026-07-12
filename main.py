@@ -57,7 +57,7 @@ def get_status(user_id = None) -> dict:
 
 async def send_status(chat_id, bot):
     while True:
-        status = get_status()
+        status = get_status(chat_id)
         formatted = "\n".join(f"{k:<20} {v}"for k, v in status.items())
 
         await bot.send_message(
@@ -107,7 +107,7 @@ def run():
     app = ApplicationBuilder().token(API_KEY).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("stop", stop))
-    app.add_handler(CommandHandler("gcs"),get_status_handler)
+    app.add_handler(CommandHandler("gcs",get_status_handler))
     app.run_polling()
 
 if __name__ == '__main__':
